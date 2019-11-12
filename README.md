@@ -1,7 +1,5 @@
 # ec2-search
-Read in an AWS credentials file and iterate through each account, saving details on every instance (in every region) to disk. We cant then quickly query this information to provide get on EC2 instances without having to log into AWS or use the AWS CLI.
-
-## Installation
+Read in an AWS credentials file and iterate through each account, saving details on every instance (in every region) to disk. We cant then quickly query this information without having to log into AWS or use the AWS CLI.
 
 ## Usage
 ### Load
