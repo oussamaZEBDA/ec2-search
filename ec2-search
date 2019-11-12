@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+
+import boto3
+import configparser
+import pickle
+from tabulate import tabulate
+import argparse
+from pathlib import Path
+
+home = str(Path.home())
+
+aws_credential_file = home + '/.aws/credentials'
+save_location = home + '/ec2.p'
+
+def get_regions():
+    aws_regions = []
+    ec2 = boto3.client('ec2', region_name='eu-west-1')
+    regions = ec2.describe_regions()
+
+    for region in regions['Regions']:
+        aws_regions.append(region['RegionName'])
+
+    return aws_regions
+
+
+def get_credentials(file):
+    credentials = configparser.ConfigParser()
+    credentials.read(aws_credential_file)
+
+    return credentials
+
+
+def get_account_id(access_key, secret_key):
+    sts = boto3.client("sts", aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+    user_arn = sts.get_caller_identity()["Arn"]
+
+    return user_arn.split(":")[4]
+
+def get_instances(credentials, regions):
+    ec2_instances = []
+    for account in credentials.sections():
+        for region in regions:
+            account_id = get_account_id(credentials[account]['aws_access_key_id'], credentials[account]['aws_secret_access_key'])
+            ec2 = boto3.resource('ec2', region_name=region, aws_access_key_id=credentials[account]['aws_access_key_id'],
+                aws_secret_access_key=credentials[account]['aws_secret_access_key'])
+
+            for instance in ec2.instances.filter():
+                instance_name = ''
+
+                try:
+                    for tag in instance.tags:
+                        if tag['Key'] == "Name":
+                            instance_name = (tag['Value'])
+                            break
+                except (TypeError):
+                    pass
+
+                print(instance.image_id)
+                
+                ec2_instances.append({instance.id:{'image' : instance.image_id, 'key' : instance.key_name, 'launch_time' : instance.launch_time, 
+                'az' : instance.placement['AvailabilityZone'], 'ip' : instance.private_ip_address, 'public_ip' : instance.public_ip_address, 
+                'state' : instance.state, 'tags' : instance.tags, 'vpc' : instance.vpc_id, 'type' : instance.instance_type,
+                    'account_id' : account_id, 'name' : instance_name}})
+
+    return ec2_instances
+
+def save_instances(instances, pickle_dir):
+    return pickle.dump(instances, open(pickle_dir, "wb"))
+
+def load_instances(pickle_dir):
+    instances = pickle.load(open(pickle_dir, "rb"))
+    return instances
+
+def search_instances(instances, term):
+    matched_instances = []
+    try:
+        for instance in instances:
+            for instance_id, instance_attributes in instance.items():
+                for tags in instance_attributes['tags']:
+                    if (tags['Value'].find(term)) > 0:
+                        matched_instances.append(instance)
+    except TypeError:
+            pass
+
+    return matched_instances
+
+def print_instances(instances):
+    pretty_table = []
+    for instance in instances:
+        for instance_id, instance_attributes in instance.items():
+            pretty_table.append([instance_id, instance_attributes['ip'], instance_attributes['public_ip'],
+                instance_attributes['az'], instance_attributes['type'],instance_attributes['vpc'], instance_attributes['state']['Name'],
+                instance_attributes['account_id'], instance_attributes['name'] ])
+    print (tabulate(pretty_table))
+                
+
+parser = argparse.ArgumentParser(description="For each set of credentials in an AWS credentials file search through \
+ each region and save details about each EC2 instance to disk. This information is searchable based on instances tags.")
+subparsers = parser.add_subparsers(dest='command')
+
+load_parser = subparsers.add_parser('load', help="Iterate through each set of crednetials in the users AWS credentials file and pickle \
+     these results to disk in the users home directory.")
+search_parser = subparsers.add_parser('search', help="Search through the stored results on disk to find a keyword in a tag.")
+
+search_parser.add_argument('term', help="The term to search each EC2 instances tag for.")
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+
+    if args.command == 'load':
+        credentials = get_credentials(aws_credential_file)
+        regions = get_regions()
+        instances = get_instances(credentials, regions)
+        save_instances(instances, save_location)
+    elif args.command == 'search':
+        instances = load_instances(save_location)
+        matched_instances = search_instances(instances, args.term)
+        print_instances(matched_instances)
