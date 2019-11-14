@@ -94,15 +94,14 @@ def print_instances(instances):
     print (tabulate(pretty_table))
                 
 
-parser = argparse.ArgumentParser(description="For each set of credentials in an AWS credentials file search through \
- each region and save details about each EC2 instance to disk. This information is searchable based on instances tags.")
+parser = argparse.ArgumentParser(description="Save and search EC2 instance details.")
 subparsers = parser.add_subparsers(dest='command')
 
-load_parser = subparsers.add_parser('load', help="Iterate through each set of crednetials in the users AWS credentials file and pickle \
-     these results to disk in the users home directory.")
-search_parser = subparsers.add_parser('search', help="Search through the stored results on disk to find a keyword in a tag.")
+load_parser = subparsers.add_parser('load', help="Iterate through each set of credentials in the users AWS credentials file and save \
+     these results to disk.")
+search_parser = subparsers.add_parser('search', help="Search through the stored results on disk to find a keyword.")
 
-search_parser.add_argument('term', help="The term to search each EC2 instances tag for.")
+search_parser.add_argument('term', help="The term to search each EC2 instances for")
 
 if __name__ == '__main__':
     args = parser.parse_args()
