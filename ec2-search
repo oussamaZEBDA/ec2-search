@@ -23,9 +23,9 @@ def get_regions():
     return aws_regions
 
 
-def get_credentials(file):
+def get_credentials(credentials_file):
     credentials = configparser.ConfigParser()
-    credentials.read(aws_credential_file)
+    credentials.read(credentials_file)
 
     return credentials
 
