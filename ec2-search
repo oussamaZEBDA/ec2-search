@@ -54,8 +54,6 @@ def get_instances(credentials, regions):
                             break
                 except (TypeError):
                     pass
-
-                print(instance.image_id)
                 
                 ec2_instances.append({instance.id:{'image' : instance.image_id, 'key' : instance.key_name, 'launch_time' : instance.launch_time, 
                 'az' : instance.placement['AvailabilityZone'], 'ip' : instance.private_ip_address, 'public_ip' : instance.public_ip_address, 
