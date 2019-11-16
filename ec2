@@ -5,12 +5,8 @@ import configparser
 import pickle
 from tabulate import tabulate
 import argparse
-from pathlib import Path
-
-home = str(Path.home())
-
-aws_credential_file = home + '/.aws/credentials'
-save_location = home + '/ec2.p'
+import os
+import sys
 
 def get_regions():
     aws_regions = []
@@ -24,11 +20,14 @@ def get_regions():
 
 
 def get_credentials(credentials_file):
-    credentials = configparser.ConfigParser()
-    credentials.read(credentials_file)
+    config = configparser.ConfigParser()
 
-    return credentials
-
+    if os.path.exists(credentials_file):
+        config.read(credentials_file)
+        return config
+    else:
+        print("Couldn't find AWS credentials file")
+        sys.exit()
 
 def get_account_id(access_key, secret_key):
     sts = boto3.client("sts", aws_access_key_id=access_key, aws_secret_access_key=secret_key)
@@ -63,10 +62,13 @@ def get_instances(credentials, regions):
     return ec2_instances
 
 def save_instances(instances, pickle_dir):
-    return pickle.dump(instances, open(pickle_dir, "wb"))
+    if not os.path.exists(pickle_dir):
+        os.mkdir(pickle_dir)
+
+    pickle.dump(instances, open(pickle_dir + "data", "wb"))
 
 def load_instances(pickle_dir):
-    instances = pickle.load(open(pickle_dir, "rb"))
+    instances = pickle.load(open(pickle_dir + "data", "rb"))
     return instances
 
 def search_instances(instances, term):
@@ -90,26 +92,29 @@ def print_instances(instances):
                 instance_attributes['az'], instance_attributes['type'],instance_attributes['vpc'], instance_attributes['state']['Name'],
                 instance_attributes['account_id'], instance_attributes['name'] ])
     print (tabulate(pretty_table))
-                
-
-parser = argparse.ArgumentParser(description="Save and search EC2 instance details.")
-subparsers = parser.add_subparsers(dest='command')
-
-load_parser = subparsers.add_parser('load', help="Iterate through the users AWS credentials file and save \
-     details of each instance to disk.")
-search_parser = subparsers.add_parser('search', help="Search through the stored results filtering by tag values.")
-
-search_parser.add_argument('term', help="The term to search each EC2 instances for")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Save and search EC2 instance details.")
+    subparsers = parser.add_subparsers(dest='command')
+
+    load_parser = subparsers.add_parser('load', help="Iterate through the users AWS credentials file and save \
+        details of each instance to disk.")
+    search_parser = subparsers.add_parser('search', help="Search through the stored results filtering by tag values.")
+    
+    search_parser.add_argument('term', help="The term to search each EC2 instances for")
+
     args = parser.parse_args()
+
+    save_path = os.path.expanduser("~") + "/.ec2-search/"
+
+    aws_credential_file = os.path.expanduser("~") + '/.aws/credentials'
 
     if args.command == 'load':
         credentials = get_credentials(aws_credential_file)
         regions = get_regions()
         instances = get_instances(credentials, regions)
-        save_instances(instances, save_location)
+        save_instances(instances, save_path)
     elif args.command == 'search':
-        instances = load_instances(save_location)
+        instances = load_instances(save_path)
         matched_instances = search_instances(instances, args.term)
         print_instances(matched_instances)
