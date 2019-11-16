@@ -95,9 +95,9 @@ def print_instances(instances):
 parser = argparse.ArgumentParser(description="Save and search EC2 instance details.")
 subparsers = parser.add_subparsers(dest='command')
 
-load_parser = subparsers.add_parser('load', help="Iterate through each set of credentials in the users AWS credentials file and save \
-     these results to disk.")
-search_parser = subparsers.add_parser('search', help="Search through the stored results on disk to find a keyword.")
+load_parser = subparsers.add_parser('load', help="Iterate through the users AWS credentials file and save \
+     details of each instance to disk.")
+search_parser = subparsers.add_parser('search', help="Search through the stored results filtering by tag values.")
 
 search_parser.add_argument('term', help="The term to search each EC2 instances for")
 
