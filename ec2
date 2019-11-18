@@ -73,14 +73,14 @@ def load_instances(pickle_dir):
 
 def search_instances(instances, term):
     matched_instances = []
-    try:
-        for instance in instances:
-            for instance_id, instance_attributes in instance.items():
+    for instance in instances:
+        for instance_id, instance_attributes in instance.items():
+            try:
                 for tags in instance_attributes['tags']:
                     if (tags['Value'].find(term)) > 0:
                         matched_instances.append(instance)
-    except TypeError:
-            pass
+            except TypeError:
+                pass
 
     return matched_instances
 
